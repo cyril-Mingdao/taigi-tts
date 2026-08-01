@@ -498,7 +498,17 @@ if (myId !== this._playId) return; // 播放期間被 stop() 或新的播放取�
 const audio = item.audio;
 audio.playbackRate = this.rate > 0 ? this.rate : 1;
 const dur = audio.duration || 0;
-audio.currentTime = Math.min(this.skipStart, Math.max(dur - 0.02, 0));
+// 修正：原本 skipStart/skipEnd 是固定秒數，對很短的音節音檔（例如不到 1 秒）
+// 會裁掉過多內容，聽起來就像整個字被吃掉、缺漏字。改成依照該音檔實際長度
+// 等比例限制頭尾合計裁切量（最多裁掉 35%），短音檔就會自動裁少一點。
+const maxTotalTrim = dur > 0 ? dur * 0.35 : 0;
+const effSkipStart =
+  dur > 0 ? Math.min(this.skipStart, maxTotalTrim) : this.skipStart;
+const effSkipEnd =
+  dur > 0
+    ? Math.min(this.skipEnd, Math.max(maxTotalTrim - effSkipStart, 0))
+    : this.skipEnd;
+audio.currentTime = Math.min(effSkipStart, Math.max(dur - 0.02, 0));
 
 const cleanup = () => {
   audio.removeEventListener('ended', onEnded);
@@ -513,7 +523,7 @@ const goNext = () => {
 };
 const onEnded = goNext;
 const onTimeUpdate = () => {
-  if (this.skipEnd > 0 && audio.duration && (audio.duration - audio.currentTime) <= this.skipEnd) {
+  if (effSkipEnd > 0 && audio.duration && (audio.duration - audio.currentTime) <= effSkipEnd) {
     goNext();
   }
 };
@@ -598,7 +608,10 @@ preload(urls) { new GaplessAudioPlayer().preload(urls); },
 // High-level play
 stop() { if (sharedPlayer) sharedPlayer.stop(); },
 play(element, lang, input, params = {}) {
-const { rate, skipStart, skipEnd, skipUnknown = true, onStateChange } = params;
+// 修正：原本 skipUnknown 預設 true，字典查無對應音檔的字會被直接跳過、完全不發聲，
+// 使用者聽起來就是漏字。改成預設 false，查無音檔時改播放提示音(no-snd)佔住該字的
+// 位置，至少不會讓整個字無聲消失。
+const { rate, skipStart, skipEnd, skipUnknown = false, onStateChange } = params;
 const { tokens, urls, defaults } = api.resolve(lang, input, { skipUnknown });
 
 if (!sharedPlayer) {
