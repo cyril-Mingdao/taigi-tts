@@ -1,3 +1,4 @@
+/*! snd-gapless.js — 改寫自 oikasu 之 snd.js（https://oikasu1.github.io/snd/），原程式、字典資料與音檔著作權屬原作者，部分音檔取自中華民國教育部《臺灣台語常用詞辭典》；改寫之播放引擎 © 2026 詹宗龍（臺中明道中學）。 */
 /*!
  * snd-gapless.js — 以 holo() 播放器(原 oikasu1/snd.js)為基礎重新設計的零延遲播放引擎。
  * 保留原始字典資料、聲調轉換、tokenize 與 resolve()/play()/holo()/kasu()/p() 對外 API，
